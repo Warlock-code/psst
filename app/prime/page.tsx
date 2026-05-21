@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import Script from "next/script"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { auth } from "@/lib/firebase/client"
@@ -13,15 +12,41 @@ declare global {
   }
 }
 
+function loadPaystackScript() {
+  return new Promise<void>((resolve, reject) => {
+    if (window.PaystackPop) {
+      resolve()
+      return
+    }
+
+    const existingScript = document.querySelector(
+      'script[src="https://js.paystack.co/v1/inline.js"]'
+    )
+
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve())
+      existingScript.addEventListener("error", () => reject())
+      return
+    }
+
+    const script = document.createElement("script")
+    script.src = "https://js.paystack.co/v1/inline.js"
+    script.async = true
+    script.onload = () => resolve()
+    script.onerror = () => reject()
+
+    document.body.appendChild(script)
+  })
+}
+
 export default function PrimePage() {
   const router = useRouter()
   const { profile } = useUserProfile()
 
   const [loading, setLoading] = useState(false)
-  const [scriptReady, setScriptReady] = useState(false)
   const [error, setError] = useState("")
 
-  function upgradePrime(plan: "monthly" | "yearly") {
+  async function upgradePrime(plan: "monthly" | "yearly") {
     setError("")
 
     const user = auth.currentUser
@@ -31,8 +56,10 @@ export default function PrimePage() {
       return
     }
 
-    if (!scriptReady || !window.PaystackPop) {
-      setError("Paystack is still loading. Refresh and try again.")
+    try {
+      await loadPaystackScript()
+    } catch {
+      setError("Paystack failed to load. Check your internet/ad blocker.")
       return
     }
 
@@ -68,9 +95,7 @@ export default function PrimePage() {
             }),
           })
 
-          if (!verifyRes.ok) {
-            throw new Error("Verification failed")
-          }
+          if (!verifyRes.ok) throw new Error("Verification failed")
 
           router.push("/lair")
         } catch {
@@ -89,72 +114,61 @@ export default function PrimePage() {
   }
 
   return (
-    <>
-      <Script
-        src="https://js.paystack.co/v1/inline.js"
-        strategy="afterInteractive"
-        onLoad={() => setScriptReady(true)}
-        onError={() => setError("Paystack script failed to load.")}
-      />
+    <main className="min-h-screen px-5 pb-28 pt-8 text-white">
+      <section className="mx-auto max-w-md">
+        <Link href="/lair" className="text-sm text-white/60">
+          ← Back to Lair
+        </Link>
 
-      <main className="min-h-screen px-5 pb-28 pt-8 text-white">
-        <section className="mx-auto max-w-md">
-          <Link href="/lair" className="text-sm text-white/60">
-            ← Back to Lair
-          </Link>
+        <div className="mt-8 rounded-[2rem] border border-yellow-300/20 bg-yellow-300/10 p-6">
+          <p className="text-5xl">👑</p>
 
-          <div className="mt-8 rounded-[2rem] border border-yellow-300/20 bg-yellow-300/10 p-6">
-            <p className="text-5xl">👑</p>
+          <h1 className="mt-4 text-4xl font-black">Psst Prime</h1>
 
-            <h1 className="mt-4 text-4xl font-black">Psst Prime</h1>
+          <p className="mt-3 text-white/70">
+            Unlock premium avatars, cosmetics, boosts and future Prime features.
+          </p>
 
-            <p className="mt-3 text-white/70">
-              Unlock premium avatars, cosmetics, boosts and future Prime features.
+          <p className="mt-4 rounded-2xl border border-red-300/20 bg-red-300/10 p-4 text-sm text-red-100">
+            Payments are live. You’ll be charged real money.
+          </p>
+
+          {profile?.isPrime && (
+            <p className="mt-4 rounded-2xl bg-green-400/10 p-4 text-sm text-green-200">
+              You already have Prime active.
             </p>
+          )}
 
-            <p className="mt-4 rounded-2xl border border-red-300/20 bg-red-300/10 p-4 text-sm text-red-100">
-              Payments are live. You’ll be charged real money.
-            </p>
-
-            {profile?.isPrime && (
-              <p className="mt-4 rounded-2xl bg-green-400/10 p-4 text-sm text-green-200">
-                You already have Prime active.
-              </p>
-            )}
-
-            <div className="mt-6 space-y-3 text-sm text-white/80">
-              <p>✅ Premium avatars</p>
-              <p>✅ Prime badge</p>
-              <p>✅ Future cosmetics</p>
-              <p>✅ Weekly boost later</p>
-            </div>
-
-            {error && (
-  <p className="mt-4 text-sm text-red-300">{error}</p>
-)}
-
-            <div className="mt-8 space-y-3">
-              <button
-                type="button"
-                onClick={() => upgradePrime("monthly")}
-                disabled={loading || profile?.isPrime}
-                className="w-full rounded-2xl bg-white p-4 font-black text-black disabled:opacity-50"
-              >
-                {loading ? "Upgrading..." : "Monthly — GH₵8"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => upgradePrime("yearly")}
-                disabled={loading || profile?.isPrime}
-                className="w-full rounded-2xl border border-white/10 bg-white/10 p-4 font-black text-white disabled:opacity-50"
-              >
-                Yearly — GH₵80
-              </button>
-            </div>
+          <div className="mt-6 space-y-3 text-sm text-white/80">
+            <p>✅ Premium avatars</p>
+            <p>✅ Prime badge</p>
+            <p>✅ Future cosmetics</p>
+            <p>✅ Weekly boost later</p>
           </div>
-        </section>
-      </main>
-    </>
+
+          {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
+
+          <div className="mt-8 space-y-3">
+            <button
+              type="button"
+              onClick={() => upgradePrime("monthly")}
+              disabled={loading || profile?.isPrime}
+              className="w-full rounded-2xl bg-white p-4 font-black text-black disabled:opacity-50"
+            >
+              {loading ? "Upgrading..." : "Monthly — GH₵8"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => upgradePrime("yearly")}
+              disabled={loading || profile?.isPrime}
+              className="w-full rounded-2xl border border-white/10 bg-white/10 p-4 font-black text-white disabled:opacity-50"
+            >
+              Yearly — GH₵80
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
   )
 }

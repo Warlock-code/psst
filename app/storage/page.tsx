@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import Script from "next/script"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { auth } from "@/lib/firebase/client"
@@ -11,6 +10,34 @@ declare global {
     PaystackPop?: any
   }
 }
+
+function loadPaystackScript() {
+  return new Promise<void>((resolve, reject) => {
+    if (window.PaystackPop) {
+      resolve()
+      return
+    }
+
+    const existingScript = document.querySelector(
+      'script[src="https://js.paystack.co/v1/inline.js"]'
+    )
+
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve())
+      existingScript.addEventListener("error", () => reject())
+      return
+    }
+
+    const script = document.createElement("script")
+    script.src = "https://js.paystack.co/v1/inline.js"
+    script.async = true
+    script.onload = () => resolve()
+    script.onerror = () => reject()
+
+    document.body.appendChild(script)
+  })
+}
+
 export default function StoragePage() {
   const router = useRouter()
   const [error, setError] = useState("")
@@ -20,18 +47,28 @@ export default function StoragePage() {
     setError("")
 
     const user = auth.currentUser
+
     if (!user || !user.email) {
       router.push("/login")
       return
     }
 
-    if (!window.PaystackPop) {
-      setError("Payment system is loading. Try again.")
+    try {
+      await loadPaystackScript()
+    } catch {
+      setError("Paystack failed to load. Check your internet/ad blocker.")
+      return
+    }
+
+    const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY
+
+    if (!publicKey) {
+      setError("Paystack public key is missing.")
       return
     }
 
     const handler = window.PaystackPop.setup({
-      key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+      key: publicKey,
       email: user.email,
       amount: pricePesewas,
       currency: "GHS",
@@ -61,48 +98,49 @@ export default function StoragePage() {
         }
       },
 
-      onClose: () => setError("Payment cancelled."),
+      onClose: () => {
+        setError("Payment cancelled.")
+      },
     })
 
     handler.openIframe()
   }
 
   return (
-    <>
-      <Script src="https://js.paystack.co/v1/inline.js" strategy="lazyOnload" />
+    <main className="min-h-screen px-5 py-8 text-white">
+      <section className="mx-auto max-w-md">
+        <Link href="/lair" className="text-sm text-white/60">
+          ← Back to Lair
+        </Link>
 
-      <main className="min-h-screen px-5 py-8 text-white">
-        <section className="mx-auto max-w-md">
-          <Link href="/lair" className="text-sm text-white/60">
-            ← Back to Lair
-          </Link>
+        <h1 className="mt-8 text-4xl font-black">Storage</h1>
 
-          <h1 className="mt-8 text-4xl font-black">Storage</h1>
-          <p className="mt-3 text-white/60">
-            Free ghosts get 50MB. Buy more when full.
-          </p>
+        <p className="mt-3 text-white/60">
+          Free ghosts get 50MB. Buy more when full.
+        </p>
 
-          {error && <p className="mt-5 text-sm text-red-300">{error}</p>}
+        {error && <p className="mt-5 text-sm text-red-300">{error}</p>}
 
-          <div className="mt-8 space-y-3">
-            <button
-              disabled={loading}
-              onClick={() => buyStorage(10, 100 * 100)}
-              className="w-full rounded-2xl bg-white p-4 font-bold text-black disabled:opacity-50"
-            >
-              Buy 10MB — GH₵1
-            </button>
+        <div className="mt-8 space-y-3">
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => buyStorage(10, 100 * 100)}
+            className="w-full rounded-2xl bg-white p-4 font-bold text-black disabled:opacity-50"
+          >
+            {loading ? "Processing..." : "Buy 10MB — GH₵1"}
+          </button>
 
-            <button
-              disabled={loading}
-              onClick={() => buyStorage(150, 1000 * 100)}
-              className="w-full rounded-2xl bg-white/10 p-4 font-bold text-white disabled:opacity-50"
-            >
-              Buy 150MB — GH₵10
-            </button>
-          </div>
-        </section>
-      </main>
-    </>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => buyStorage(150, 1000 * 100)}
+            className="w-full rounded-2xl bg-white/10 p-4 font-bold text-white disabled:opacity-50"
+          >
+            {loading ? "Processing..." : "Buy 150MB — GH₵10"}
+          </button>
+        </div>
+      </section>
+    </main>
   )
 }
