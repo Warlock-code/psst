@@ -8,14 +8,9 @@ import { auth } from "@/lib/firebase/client"
 
 declare global {
   interface Window {
-    PaystackPop?: {
-      setup: (config: any) => {
-        openIframe: () => void
-      }
-    }
+    PaystackPop?: any
   }
 }
-
 export default function StoragePage() {
   const router = useRouter()
   const [error, setError] = useState("")
