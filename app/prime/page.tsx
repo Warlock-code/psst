@@ -48,6 +48,7 @@ export default function PrimePage() {
 
   async function upgradePrime(plan: "monthly" | "yearly") {
     setError("")
+    alert("Button clicked")
 
     const user = auth.currentUser
 
