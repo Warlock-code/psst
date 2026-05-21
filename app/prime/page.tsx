@@ -9,11 +9,7 @@ import { useUserProfile } from "@/lib/firebase/use-user-profile"
 
 declare global {
   interface Window {
-    PaystackPop?: {
-      setup: (config: any) => {
-        openIframe: () => void
-      }
-    }
+    PaystackPop?: any
   }
 }
 
@@ -22,9 +18,10 @@ export default function PrimePage() {
   const { profile } = useUserProfile()
 
   const [loading, setLoading] = useState(false)
+  const [scriptReady, setScriptReady] = useState(false)
   const [error, setError] = useState("")
 
-  async function upgradePrime(plan: "monthly" | "yearly") {
+  function upgradePrime(plan: "monthly" | "yearly") {
     setError("")
 
     const user = auth.currentUser
@@ -34,19 +31,22 @@ export default function PrimePage() {
       return
     }
 
-    if (!window.PaystackPop) {
-      setError("Payment system is still loading. Try again.")
+    if (!scriptReady || !window.PaystackPop) {
+      setError("Paystack is still loading. Refresh and try again.")
+      return
+    }
+
+    const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY
+
+    if (!publicKey) {
+      setError("Paystack public key is missing.")
       return
     }
 
     const amount = plan === "monthly" ? 800 * 100 : 8000 * 100
 
-    console.log(window.PaystackPop)
-
-    console.log(process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY)
-
     const handler = window.PaystackPop.setup({
-      key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+      key: publicKey,
       email: user.email,
       amount,
       currency: "GHS",
@@ -54,7 +54,6 @@ export default function PrimePage() {
 
       callback: async (response: any) => {
         setLoading(true)
-        setError("")
 
         try {
           const verifyRes = await fetch("/api/paystack/verify", {
@@ -70,12 +69,12 @@ export default function PrimePage() {
           })
 
           if (!verifyRes.ok) {
-            throw new Error("Payment verification failed.")
+            throw new Error("Verification failed")
           }
 
           router.push("/lair")
         } catch {
-          setError("Payment was made but verification failed. Contact support.")
+          setError("Payment made but verification failed. Contact support.")
         } finally {
           setLoading(false)
         }
@@ -91,7 +90,12 @@ export default function PrimePage() {
 
   return (
     <>
-      <Script src="https://js.paystack.co/v1/inline.js" strategy="lazyOnload" />
+      <Script
+        src="https://js.paystack.co/v1/inline.js"
+        strategy="afterInteractive"
+        onLoad={() => setScriptReady(true)}
+        onError={() => setError("Paystack script failed to load.")}
+      />
 
       <main className="min-h-screen px-5 pb-28 pt-8 text-white">
         <section className="mx-auto max-w-md">
@@ -125,10 +129,13 @@ export default function PrimePage() {
               <p>✅ Weekly boost later</p>
             </div>
 
-            {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
+            {error && (
+  <p className="mt-4 text-sm text-red-300">{error}</p>
+)}
 
             <div className="mt-8 space-y-3">
               <button
+                type="button"
                 onClick={() => upgradePrime("monthly")}
                 disabled={loading || profile?.isPrime}
                 className="w-full rounded-2xl bg-white p-4 font-black text-black disabled:opacity-50"
@@ -137,6 +144,7 @@ export default function PrimePage() {
               </button>
 
               <button
+                type="button"
                 onClick={() => upgradePrime("yearly")}
                 disabled={loading || profile?.isPrime}
                 className="w-full rounded-2xl border border-white/10 bg-white/10 p-4 font-black text-white disabled:opacity-50"
