@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createUserWithEmailAndPassword } from "firebase/auth"
 import { doc, setDoc, serverTimestamp } from "firebase/firestore"
@@ -10,10 +10,11 @@ function makeGhostId() {
   const names = ["SilentOwl", "CampusGhost", "TeaWalker", "ShadowPal", "AnonVibe"]
   const name = names[Math.floor(Math.random() * names.length)]
   const num = Math.floor(10 + Math.random() * 90)
+
   return `${name}_${num}`
 }
 
-export default function SignupPage() {
+function SignupContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const campus = searchParams.get("campus") || ""
@@ -25,46 +26,49 @@ export default function SignupPage() {
 
   async function handleSignup(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+
     setLoading(true)
     setError("")
-    
+
     const allowedDomains = [
-  "st.ug.edu.gh",
-  "ug.edu.gh",
-  "st.knust.edu.gh",
-  "ucc.edu.gh",
-  "live.gctu.edu.gh",
-  "upsamail.edu.gh",
-]
+      "st.ug.edu.gh",
+      "ug.edu.gh",
+      "st.knust.edu.gh",
+      "ucc.edu.gh",
+      "live.gctu.edu.gh",
+      "upsamail.edu.gh",
+    ]
 
-const emailDomain = email.split("@")[1]
+    const emailDomain = email.split("@")[1]
 
-if (!allowedDomains.includes(emailDomain)) {
-  setError("Use a valid school email.")
-  setLoading(false)
-  return
-}
+    if (!allowedDomains.includes(emailDomain)) {
+      setError("Use a valid school email.")
+      setLoading(false)
+      return
+    }
+
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password)
       const ghostId = makeGhostId()
 
       await setDoc(doc(db, "users", res.user.uid), {
-  uid: res.user.uid,
-  email,
-  campus,
-  ghostId,
-  avatarEmoji: "👻",
-avatarTheme: "default",
-ownedCosmetics: [],
-  emailVerified: true,
-  createdAt: serverTimestamp(),
-})
-
-
-router.push("/feed")
+        uid: res.user.uid,
+        email,
+        campus,
+        ghostId,
+        avatarEmoji: "👻",
+        avatarTheme: "default",
+        ownedCosmetics: [],
+        emailVerified: true,
+        isPrime: false,
+        storageUsed: 0,
+        storageLimit: 50,
+        streakCount: 0,
+        createdAt: serverTimestamp(),
+      })
 
       router.push("/feed")
-    } catch (err) {
+    } catch {
       setError("Signup failed. Check your email/password and try again.")
     } finally {
       setLoading(false)
@@ -108,5 +112,13 @@ router.push("/feed")
         </form>
       </section>
     </main>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen p-5 text-white">Loading...</main>}>
+      <SignupContent />
+    </Suspense>
   )
 }
