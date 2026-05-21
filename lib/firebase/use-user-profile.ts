@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { onAuthStateChanged, User } from "firebase/auth"
-import { doc, getDoc } from "firebase/firestore"
+import { doc, onSnapshot } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase/client"
 
 type Profile = {
@@ -14,13 +14,14 @@ type Profile = {
   avatarEmoji?: string
   avatarTheme?: string
   ownedCosmetics?: string[]
+
+  storageUsed?: number
   storageLimit?: number
 
   isPrime?: boolean
   primePlan?: "monthly" | "yearly"
   primeStartedAt?: any
   primeExpiresAt?: any
-  storageUsed?: number
 
   lastPostDate?: string
   streakCount?: number
@@ -32,8 +33,15 @@ export function useUserProfile() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (currentUser) => {
+    let unsubProfile: (() => void) | undefined
+
+    const unsubAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser)
+
+      if (unsubProfile) {
+        unsubProfile()
+        unsubProfile = undefined
+      }
 
       if (!currentUser) {
         setProfile(null)
@@ -41,9 +49,13 @@ export function useUserProfile() {
         return
       }
 
-      const snap = await getDoc(doc(db, "users", currentUser.uid))
+      unsubProfile = onSnapshot(doc(db, "users", currentUser.uid), (snap) => {
+        if (!snap.exists()) {
+          setProfile(null)
+          setLoading(false)
+          return
+        }
 
-      if (snap.exists()) {
         const data = snap.data() as Profile
 
         if (data.isPrime && data.primeExpiresAt) {
@@ -57,12 +69,14 @@ export function useUserProfile() {
         }
 
         setProfile(data)
-      }
-
-      setLoading(false)
+        setLoading(false)
+      })
     })
 
-    return () => unsub()
+    return () => {
+      unsubAuth()
+      if (unsubProfile) unsubProfile()
+    }
   }, [])
 
   return { user, profile, loading }
