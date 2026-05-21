@@ -74,29 +74,29 @@ export default function StoragePage() {
       currency: "GHS",
       ref: `psst_storage_${amountMb}_${user.uid}_${Date.now()}`,
 
-      callback: async (response: any) => {
-        setLoading(true)
+      callback: (response: any) => {
+  setLoading(true)
 
-        try {
-          const verifyRes = await fetch("/api/paystack/verify-storage", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              reference: response.reference,
-              uid: user.uid,
-              amountMb,
-            }),
-          })
-
-          if (!verifyRes.ok) throw new Error("Verification failed")
-
-          router.push("/lair")
-        } catch {
-          setError("Payment made but verification failed. Contact support.")
-        } finally {
-          setLoading(false)
-        }
-      },
+  fetch("/api/paystack/verify-storage", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      reference: response.reference,
+      uid: user.uid,
+      amountMb,
+    }),
+  })
+    .then((verifyRes) => {
+      if (!verifyRes.ok) throw new Error("Verification failed")
+      router.push("/lair")
+    })
+    .catch(() => {
+      setError("Payment made but verification failed. Contact support.")
+    })
+    .finally(() => {
+      setLoading(false)
+    })
+},
 
       onClose: () => {
         setError("Payment cancelled.")
