@@ -71,7 +71,7 @@ export default function PrimePage() {
       return
     }
 
-    const amount = plan === "monthly" ? 8 : 80
+    const amount = plan === "monthly" ? 800 : 8000
 
     const handler = window.PaystackPop.setup({
       key: publicKey,

@@ -125,7 +125,7 @@ export default function StoragePage() {
           <button
             type="button"
             disabled={loading}
-            onClick={() => buyStorage(10, 1)}
+            onClick={() => buyStorage(10, 100)}
             className="w-full rounded-2xl bg-white p-4 font-bold text-black disabled:opacity-50"
           >
             {loading ? "Processing..." : "Buy 10MB — GH₵1"}
@@ -134,7 +134,7 @@ export default function StoragePage() {
           <button
             type="button"
             disabled={loading}
-            onClick={() => buyStorage(150, 10)}
+            onClick={() => buyStorage(150, 1000)}
             className="w-full rounded-2xl bg-white/10 p-4 font-bold text-white disabled:opacity-50"
           >
             {loading ? "Processing..." : "Buy 150MB — GH₵10"}
