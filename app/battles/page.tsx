@@ -10,7 +10,6 @@ import {
   getDoc,
   increment,
   onSnapshot,
-  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -57,18 +56,19 @@ export default function BattlesPage() {
       setCampus(profile.campus)
 
       const q = query(
-        collection(db, "battleEntries"),
-        where("campus", "==", profile.campus),
-        orderBy("votes", "desc")
-      )
+  collection(db, "battleEntries"),
+  where("campus", "==", profile.campus)
+)
 
       return onSnapshot(q, (snapshot) => {
-        setEntries(
-          snapshot.docs.map((item) => ({
-            id: item.id,
-            ...item.data(),
-          })) as BattleEntry[]
-        )
+        const loadedEntries = snapshot.docs.map((item) => ({
+  id: item.id,
+  ...item.data(),
+})) as BattleEntry[]
+
+setEntries(
+  loadedEntries.sort((a, b) => (b.votes || 0) - (a.votes || 0))
+)
       })
     }
 
