@@ -141,7 +141,21 @@ export default function LairPage() {
           >
             Cosmetic Shop ✨
           </Link>
+<div className="mt-4 grid grid-cols-2 gap-3">
+  <Link
+    href="/privacy-policy"
+    className="rounded-2xl bg-white/10 p-4 text-center text-sm font-bold text-white"
+  >
+    Privacy
+  </Link>
 
+  <Link
+    href="/terms"
+    className="rounded-2xl bg-white/10 p-4 text-center text-sm font-bold text-white"
+  >
+    Terms
+  </Link>
+</div>
           <button
             onClick={handleLogout}
             className="mb-24 mt-4 w-full rounded-2xl bg-red-400/90 p-4 font-bold text-black"
