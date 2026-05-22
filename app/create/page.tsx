@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   addDoc,
@@ -9,155 +9,97 @@ import {
   doc,
   getDoc,
   increment,
-  onSnapshot,
-  query,
   serverTimestamp,
-  setDoc,
   updateDoc,
-  where,
 } from "firebase/firestore"
-
 import { auth, db } from "@/lib/firebase/client"
 
-type BattleEntry = {
-  id: string
-  text: string
-  prompt: string
-  promptId: string
-  campus: string
-  ghostId: string
-  avatarEmoji?: string
-  isPrime?: boolean
-  uid: string
-  votes: number
-}
-
-type BattlePrompt = {
-  text: string
-  campus: string
-  active: boolean
-  startsAt?: any
-  endsAt?: any
-}
-
-function getPromptId(campus: string) {
-  if (campus === "GCTU") return "gctu_current"
-
-  return "gctu_current"
-}
-
-function getBattleEndDate(value: any) {
-  if (!value) return ""
-
-  const date = value.toDate ? value.toDate() : new Date(value)
-
-  return date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  })
-}
-
-function battleHasEnded(value: any) {
-  if (!value) return false
-
-  const date = value.toDate ? value.toDate() : new Date(value)
-
-  return date < new Date()
-}
-
-export default function BattlesPage() {
+export default function CreatePostPage() {
   const router = useRouter()
 
-  const [entry, setEntry] = useState("")
-  const [entries, setEntries] = useState<BattleEntry[]>([])
-  const [campus, setCampus] = useState("")
-  const [battlePrompt, setBattlePrompt] =
-    useState<BattlePrompt | null>(null)
-
+  const [text, setText] = useState("")
+  const [image, setImage] = useState<File | null>(null)
+  const [voice, setVoice] = useState<File | null>(null)
+  const [category, setCategory] = useState("confession")
+  const [pollOptions, setPollOptions] = useState(["", ""])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [voting, setVoting] = useState<string | null>(null)
+  const [recording, setRecording] = useState(false)
 
-  useEffect(() => {
-    const user = auth.currentUser
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
 
-    if (!user) {
-      router.push("/login")
-      return
+  async function uploadToCloudinary(file: File, resourceType: "image" | "video" = "image") {
+    const formData = new FormData()
+
+    formData.append("file", file)
+    formData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!)
+
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    )
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.error?.message || "Cloudinary upload failed")
     }
 
-    async function loadBattle(currentUser: any) {
-      const profileSnap = await getDoc(
-        doc(db, "users", currentUser.uid)
-      )
+    return data.secure_url
+  }
 
-      if (!profileSnap.exists()) return
-
-      const profile = profileSnap.data()
-
-      const userCampus = profile.campus || "GCTU"
-
-      setCampus(userCampus)
-
-      const promptId = getPromptId(userCampus)
-
-      const promptSnap = await getDoc(
-        doc(db, "battlePrompts", promptId)
-      )
-
-      if (promptSnap.exists()) {
-        setBattlePrompt(promptSnap.data() as BattlePrompt)
-      } else {
-        setBattlePrompt({
-          text: "Worst lecturer habit?",
-          campus: userCampus,
-          active: true,
-        })
+  async function startRecording() {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError("Recording is not supported on this device.")
+        return
       }
 
-      const q = query(
-        collection(db, "battleEntries"),
-        where("campus", "==", userCampus),
-        where("promptId", "==", promptId)
-      )
-
-      return onSnapshot(q, (snapshot) => {
-        const loadedEntries = snapshot.docs.map((docItem) => ({
-          id: docItem.id,
-          ...docItem.data(),
-        })) as BattleEntry[]
-
-        loadedEntries.sort((a, b) => b.votes - a.votes)
-
-        setEntries(loadedEntries)
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
       })
+
+      const recorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = recorder
+      chunksRef.current = []
+
+      recorder.ondataavailable = (event) => {
+        chunksRef.current.push(event.data)
+      }
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" })
+        const file = new File([blob], `voice-${Date.now()}.webm`, {
+          type: "audio/webm",
+        })
+
+        setVoice(file)
+        stream.getTracks().forEach((track) => track.stop())
+      }
+
+      recorder.start()
+      setRecording(true)
+    } catch {
+      setError("Mic permission denied. Allow microphone access.")
     }
+  }
 
-    let unsubscribe: any
+  function stopRecording() {
+    mediaRecorderRef.current?.stop()
+    setRecording(false)
+  }
 
-    loadBattle(user).then((res) => {
-      unsubscribe = res
-    })
-
-    return () => {
-      if (unsubscribe) unsubscribe()
-    }
-  }, [router])
-
-  async function enterBattle() {
-    if (!entry.trim()) return
-
-    if (!battlePrompt) {
-      setError("Battle prompt still loading.")
-      return
-    }
-
-    if (battleHasEnded(battlePrompt.endsAt)) {
-      setError("This battle has ended.")
-      return
-    }
-
+  async function handlePost(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
     setLoading(true)
     setError("")
 
@@ -169,305 +111,235 @@ export default function BattlesPage() {
         return
       }
 
-      const profileSnap = await getDoc(
-        doc(db, "users", user.uid)
-      )
+      const userSnap = await getDoc(doc(db, "users", user.uid))
 
-      if (!profileSnap.exists()) {
+      if (!userSnap.exists()) {
         setError("Ghost profile not found.")
         return
       }
 
-      const profile = profileSnap.data()
+      const profile = userSnap.data()
+      const cleanPollOptions = pollOptions.filter((option) => option.trim() !== "")
 
-      const promptId = getPromptId(profile.campus)
+      if (category === "poll" && cleanPollOptions.length < 2) {
+        setError("Poll needs at least 2 options.")
+        return
+      }
 
-      await addDoc(collection(db, "battleEntries"), {
-        text: entry.trim(),
-        prompt: battlePrompt.text,
-        promptId,
+      const uploadSize =
+        category === "voice"
+          ? Math.round((voice?.size || 0) / 1024 / 1024)
+          : category === "meme"
+            ? Math.round((image?.size || 0) / 1024 / 1024)
+            : 0
+
+      const currentStorage = profile.storageUsed || 0
+      const storageLimit = profile.storageLimit || 50
+
+      if (!profile.isPrime && currentStorage + uploadSize > storageLimit) {
+        setError("Storage full. Upgrade storage.")
+        return
+      }
+
+      let imageUrl = ""
+      let voiceUrl = ""
+
+      if (image && category === "meme") {
+        imageUrl = await uploadToCloudinary(image)
+      }
+
+      if (voice && category === "voice") {
+        voiceUrl = await uploadToCloudinary(voice, "video")
+      }
+
+      const now = new Date()
+      const today = now.toDateString()
+      const lastPostDate = profile.lastPostDate
+      const currentStreak = profile.streakCount || 0
+
+      await addDoc(collection(db, "posts"), {
+        text,
+        imageUrl,
+        voiceUrl,
+        type: category,
+        pollOptions: category === "poll" ? cleanPollOptions : [],
+        pollVotes: {},
         campus: profile.campus,
         ghostId: profile.ghostId,
-        avatarEmoji: profile.avatarEmoji || "👻",
+        storageUsed: uploadSize,
         isPrime: profile.isPrime || false,
+        avatarEmoji: profile.avatarEmoji || "👻",
         uid: user.uid,
-        votes: 0,
+        yeahs: profile.isPrime ? 5 : 0,
+        commentsCount: 0,
         createdAt: serverTimestamp(),
       })
 
-      setEntry("")
+      await updateDoc(doc(db, "users", user.uid), {
+        storageUsed: increment(uploadSize),
+        lastPostDate: today,
+        streakCount: lastPostDate === today ? currentStreak : currentStreak + 1,
+      })
+
+      router.push("/feed")
     } catch (err) {
       console.error(err)
-      setError("Battle entry failed.")
+      setError(err instanceof Error ? err.message : "Post failed. Try again.")
     } finally {
       setLoading(false)
     }
   }
 
-  async function voteBattle(entryId: string) {
-    if (battleHasEnded(battlePrompt?.endsAt)) {
-      setError("Battle already ended.")
-      return
-    }
-
-    setVoting(entryId)
-    setError("")
-
-    try {
-      const user = auth.currentUser
-
-      if (!user) {
-        router.push("/login")
-        return
-      }
-
-      const entryRef = doc(db, "battleEntries", entryId)
-
-      const entrySnap = await getDoc(entryRef)
-
-      if (!entrySnap.exists()) return
-
-      const entryData = entrySnap.data()
-
-      if (entryData.uid === user.uid) {
-        setError("You can't vote your own entry.")
-        return
-      }
-
-      const voteRef = doc(
-        db,
-        "battleEntries",
-        entryId,
-        "votesBy",
-        user.uid
-      )
-
-      const voteSnap = await getDoc(voteRef)
-
-      if (voteSnap.exists()) {
-        setError("You already voted.")
-        return
-      }
-
-      const profileSnap = await getDoc(
-        doc(db, "users", user.uid)
-      )
-
-      const profile = profileSnap.data()
-
-      const votePower = profile?.isPrime ? 2 : 1
-
-      await setDoc(voteRef, {
-        uid: user.uid,
-        votePower,
-        createdAt: serverTimestamp(),
-      })
-
-      await updateDoc(entryRef, {
-        votes: increment(votePower),
-      })
-    } catch (err) {
-      console.error(err)
-      setError("Voting failed.")
-    } finally {
-      setVoting(null)
-    }
-  }
-
-  const battleEnded = battleHasEnded(
-    battlePrompt?.endsAt
-  )
-
   return (
     <main className="min-h-screen px-5 pb-28 pt-8 text-white">
       <section className="mx-auto max-w-md">
-        <Link
-          href="/feed"
-          className="text-sm text-white/60"
-        >
-          ← Back to feed
-        </Link>
+        <h1 className="text-4xl font-black">Drop gist</h1>
+        <p className="mt-3 text-white/60">Text, meme, gossip, poll or voice.</p>
 
-        <h1 className="mt-8 text-4xl font-black">
-          Ghost Battles ⚔️
-        </h1>
-
-        <p className="mt-3 text-white/60">
-          Weekly campus battles. Enter anonymously and let ghosts vote.
-        </p>
-
-        <div className="mt-8 rounded-[2rem] border border-white/10 bg-white/10 p-6">
-          <p className="text-sm font-bold text-purple-200">
-            This week’s prompt
-          </p>
-
-          <h2 className="mt-3 text-2xl font-black">
-            {battlePrompt?.text || "Loading prompt..."}
-          </h2>
-
-          {battlePrompt?.endsAt && (
-            <p className="mt-2 text-sm text-white/50">
-              Ends{" "}
-              {getBattleEndDate(
-                battlePrompt.endsAt
-              )}
-            </p>
-          )}
-
-          <p className="mt-2 text-sm text-white/50">
-            Winner gets campus clout + future cosmetic unlocks.
-          </p>
-
-          {battleEnded && (
-            <div className="mt-4 rounded-2xl border border-red-300/20 bg-red-300/10 p-4 text-sm text-red-100">
-              This battle has ended. Entries and
-              votes are locked.
-            </div>
-          )}
-
+        <form onSubmit={handlePost} className="mt-8 space-y-4">
           <textarea
-            value={entry}
-            onChange={(e) =>
-              setEntry(e.target.value)
-            }
-            maxLength={220}
-            placeholder="Drop your battle entry..."
-            className="mt-5 min-h-32 w-full rounded-2xl bg-black/20 p-4 outline-none"
+            className="min-h-40 w-full rounded-3xl border border-white/10 bg-white/10 p-4 outline-none"
+            placeholder="What happened on campus? 👀"
+            maxLength={280}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
           />
 
-          {error && (
-            <p className="mt-3 text-sm text-red-300">
-              {error}
-            </p>
+          <div className="grid grid-cols-5 gap-2">
+            {["confession", "gossip", "meme", "poll", "voice"].map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setCategory(item)}
+                className={`rounded-2xl p-3 text-xs font-bold capitalize ${
+                  category === item ? "bg-white text-black" : "bg-white/10 text-white"
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+
+          {category === "poll" && (
+            <div className="space-y-3">
+              {pollOptions.map((option, index) => (
+                <input
+                  key={index}
+                  value={option}
+                  onChange={(e) => {
+                    const updated = [...pollOptions]
+                    updated[index] = e.target.value
+                    setPollOptions(updated)
+                  }}
+                  placeholder={`Option ${index + 1}`}
+                  className="w-full rounded-2xl border border-white/10 bg-white/10 p-4 outline-none"
+                />
+              ))}
+            </div>
           )}
 
-          <button
-            onClick={enterBattle}
-            disabled={
-              loading ||
-              !entry.trim() ||
-              battleEnded ||
-              !battlePrompt
-            }
-            className="mt-4 w-full rounded-2xl bg-white p-4 font-bold text-black disabled:opacity-50"
-          >
-            {battleEnded
-              ? "Battle Ended"
-              : loading
-              ? "Entering..."
-              : "Enter Battle"}
-          </button>
-        </div>
-
-        <div className="mt-8 space-y-3">
-          <h2 className="text-2xl font-black">
-            Entries — {campus}
-          </h2>
-
-          {entries.length === 0 && (
-            <p className="rounded-2xl bg-white/10 p-4 text-white/60">
-              No battle entries yet.
-            </p>
+          {category === "meme" && (
+            <label className="block rounded-3xl border border-dashed border-white/20 bg-white/10 p-5 text-center">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => setImage(e.target.files?.[0] || null)}
+              />
+              {image ? image.name : "Tap to add meme/image"}
+            </label>
           )}
 
-          {entries.map((item, index) => (
-            <div
-              key={item.id}
-              className={`rounded-2xl border p-4 ${
-                index === 0
-                  ? "border-yellow-300/30 bg-yellow-300/10"
-                  : "border-white/10 bg-white/10"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-xl">
-                  {item.avatarEmoji || "👻"}
-                </span>
-
-                <p className="font-bold text-purple-200">
-                  {item.ghostId}
-
-                  {index === 0 && (
-                    <span className="ml-2">
-                      👑
-                    </span>
-                  )}
-
-                  {item.isPrime && (
-                    <span className="ml-2 rounded-full bg-yellow-300 px-2 py-1 text-[10px] font-black text-black">
-                      PRIME
-                    </span>
-                  )}
+          {category === "voice" && (
+            <div className="space-y-3">
+              <div className="rounded-3xl border border-white/10 bg-white/10 p-5 text-center">
+                <p className="font-bold">
+                  {voice ? voice.name : "Record or upload voice note"}
                 </p>
+
+                {voice && (
+                  <audio
+                    controls
+                    src={URL.createObjectURL(voice)}
+                    className="mt-4 w-full"
+                  />
+                )}
               </div>
 
-              <p className="mt-3">
-                {item.text}
-              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {!recording ? (
+                  <button
+                    type="button"
+                    onClick={startRecording}
+                    className="rounded-2xl bg-white p-4 font-bold text-black"
+                  >
+                    🎙️ Record
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={stopRecording}
+                    className="rounded-2xl bg-red-400 p-4 font-bold text-black"
+                  >
+                    Stop
+                  </button>
+                )}
 
-              <div className="mt-4 flex items-center justify-between">
-                <p className="text-sm text-white/50">
-                  ⚔️ {item.votes || 0} votes
-                </p>
-
-                <button
-                  onClick={() =>
-                    voteBattle(item.id)
-                  }
-                  disabled={
-                    voting === item.id ||
-                    battleEnded
-                  }
-                  className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-black disabled:opacity-50"
-                >
-                  {battleEnded
-                    ? "Locked"
-                    : voting === item.id
-                    ? "Voting..."
-                    : "Vote ⚔️"}
-                </button>
+                <label className="rounded-2xl bg-white/10 p-4 text-center font-bold">
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    className="hidden"
+                    onChange={(e) => setVoice(e.target.files?.[0] || null)}
+                  />
+                  Upload
+                </label>
               </div>
             </div>
-          ))}
-        </div>
+          )}
+
+          <p className="text-right text-xs text-white/40">{text.length}/280</p>
+
+          {error && <p className="text-sm text-red-300">{error}</p>}
+
+          <button
+            disabled={
+              loading ||
+              (category === "confession" && !text.trim()) ||
+              (category === "gossip" && !text.trim()) ||
+              (category === "meme" && !image) ||
+              (category === "voice" && !voice) ||
+              (category === "poll" &&
+                pollOptions.filter((option) => option.trim() !== "").length < 2)
+            }
+            className="w-full rounded-2xl bg-white p-4 font-bold text-black disabled:opacity-50"
+          >
+            {loading ? "Posting..." : "Post anonymously"}
+          </button>
+        </form>
       </section>
 
       <nav className="fixed bottom-4 left-1/2 flex w-[92%] max-w-md -translate-x-1/2 items-center justify-between rounded-3xl border border-white/10 bg-black/80 p-2 backdrop-blur">
-  <Link
-    href="/feed"
-    className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70"
-  >
-    Feed
-  </Link>
+        <Link href="/feed" className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70">
+          Feed
+        </Link>
 
-  <Link
-    href="/leaderboard"
-    className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70"
-  >
-    Board
-  </Link>
+        <Link href="/leaderboard" className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70">
+          Board
+        </Link>
 
-  <Link
-    href="/create"
-    className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70"
-  >
-    Post
-  </Link>
+        <Link href="/create" className="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-black">
+          Post
+        </Link>
 
-  <Link
-    href="/battles"
-    className="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-black"
-  >
-    Battle
-  </Link>
+        <Link href="/battles" className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70">
+          Battle
+        </Link>
 
-  <Link
-    href="/lair"
-    className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70"
-  >
-    Lair
-  </Link>
-</nav>
+        <Link href="/lair" className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70">
+          Lair
+        </Link>
+      </nav>
     </main>
   )
 }
