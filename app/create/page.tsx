@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
@@ -24,6 +24,9 @@ export default function CreatePostPage() {
   const [pollOptions, setPollOptions] = useState(["", ""])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+const chunksRef = useRef<Blob[]>([])
+const [recording, setRecording] = useState(false)
 
   async function uploadToCloudinary(file: File, resourceType: "image" | "video" = "image") {
   const formData = new FormData()
@@ -51,6 +54,40 @@ export default function CreatePostPage() {
   }
 
   return data.secure_url
+}
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+    const recorder = new MediaRecorder(stream)
+    mediaRecorderRef.current = recorder
+    chunksRef.current = []
+
+    recorder.ondataavailable = (event) => {
+      chunksRef.current.push(event.data)
+    }
+
+    recorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: "audio/webm" })
+      const file = new File([blob], `voice-${Date.now()}.webm`, {
+        type: "audio/webm",
+      })
+
+      setVoice(file)
+      stream.getTracks().forEach((track) => track.stop())
+    }
+
+    recorder.start()
+    setRecording(true)
+  } catch {
+    setError("Mic permission denied. Allow microphone access.")
+  }
+}
+
+function stopRecording() {
+  mediaRecorderRef.current?.stop()
+  setRecording(false)
 }
 
   async function handlePost(e: React.FormEvent<HTMLFormElement>) {
@@ -205,15 +242,51 @@ if (voice && category === "voice") {
 )}
 
 {category === "voice" && (
-  <label className="block rounded-3xl border border-dashed border-white/20 bg-white/10 p-5 text-center">
-    <input
-      type="file"
-      accept="audio/*"
-      className="hidden"
-      onChange={(e) => setVoice(e.target.files?.[0] || null)}
-    />
-    {voice ? voice.name : "Tap to add voice note"}
-  </label>
+  <div className="space-y-3">
+    <div className="rounded-3xl border border-white/10 bg-white/10 p-5 text-center">
+      <p className="font-bold">
+        {voice ? voice.name : "Record or upload voice note"}
+      </p>
+
+      {voice && (
+        <audio
+          controls
+          src={URL.createObjectURL(voice)}
+          className="mt-4 w-full"
+        />
+      )}
+    </div>
+
+    <div className="grid grid-cols-2 gap-3">
+      {!recording ? (
+        <button
+          type="button"
+          onClick={startRecording}
+          className="rounded-2xl bg-white p-4 font-bold text-black"
+        >
+          🎙️ Record
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={stopRecording}
+          className="rounded-2xl bg-red-400 p-4 font-bold text-black"
+        >
+          Stop
+        </button>
+      )}
+
+      <label className="rounded-2xl bg-white/10 p-4 text-center font-bold">
+        <input
+          type="file"
+          accept="audio/*"
+          className="hidden"
+          onChange={(e) => setVoice(e.target.files?.[0] || null)}
+        />
+        Upload
+      </label>
+    </div>
+  </div>
 )}
           
 
