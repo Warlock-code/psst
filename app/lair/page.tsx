@@ -8,7 +8,7 @@ import { doc, updateDoc } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase/client"
 import { useUserProfile } from "@/lib/firebase/use-user-profile"
 
-function formatPrimeExpiry(value: any) {
+function formatDate(value: any) {
   if (!value) return ""
 
   const date = value.toDate ? value.toDate() : new Date(value)
@@ -92,31 +92,71 @@ export default function LairPage() {
           <h1 className="mt-5 text-3xl font-black">{profile.ghostId}</h1>
           <p className="mt-2 text-white/60">{profile.campus}</p>
 
-          {profile.isPrime && (
-            <p className="mt-3 inline-block rounded-full bg-yellow-300 px-4 py-2 text-sm font-bold text-black">
-              👑 Prime Ghost
-            </p>
-          )}
+          <div className="mt-4 flex flex-wrap gap-2">
+            {profile.isPrime && (
+              <span className="rounded-full bg-yellow-300 px-4 py-2 text-sm font-bold text-black">
+                👑 Prime Ghost
+              </span>
+            )}
+
+            {profile.battleChampion && (
+              <span className="rounded-full bg-purple-400 px-4 py-2 text-sm font-bold text-black">
+                ⚔️ Battle Champion
+              </span>
+            )}
+
+            {profile.weeklyChampion && (
+              <span className="rounded-full bg-orange-300 px-4 py-2 text-sm font-bold text-black">
+                🏆 Weekly Top Ghost
+              </span>
+            )}
+          </div>
 
           {profile.isPrime && profile.primeExpiresAt && (
             <p className="mt-2 text-xs text-white/40">
-              Prime expires {formatPrimeExpiry(profile.primeExpiresAt)}
+              Prime expires {formatDate(profile.primeExpiresAt)}
             </p>
           )}
 
-          <div className="mt-6 grid grid-cols-2 gap-3">
+          <div className="mt-6 grid grid-cols-1 gap-3">
             <div className="rounded-2xl bg-black/20 p-4">
               <p className="text-xs text-white/40">Streak</p>
               <p className="mt-1 text-2xl font-black">
                 {profile.streakCount || 0} 🔥
               </p>
               <p className="mt-1 text-xs text-white/40">Post daily to grow it</p>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <Link
+                  href="/streak/freeze"
+                  className="rounded-2xl bg-white/10 p-3 text-center text-xs font-bold text-white"
+                >
+                  Freeze — GH₵4
+                </Link>
+
+                <Link
+                  href="/streak/restore"
+                  className="rounded-2xl bg-white/10 p-3 text-center text-xs font-bold text-white"
+                >
+                  Restore — GH₵5
+                </Link>
+              </div>
+
+              {profile.streakFreezeUntil && (
+                <p className="mt-3 text-xs text-blue-200">
+                  Freeze active until {formatDate(profile.streakFreezeUntil)}
+                </p>
+              )}
             </div>
 
             <div className="rounded-2xl bg-black/20 p-4">
               <p className="text-xs text-white/40">Storage</p>
               <p className="mt-1 text-2xl font-black">
                 {profile.storageUsed || 0}MB / {profile.storageLimit || 50}MB
+              </p>
+
+              <p className="mt-3 text-xs text-white/40">
+                Free boosts: {profile.freeBoosts || 0}
               </p>
 
               <Link
@@ -141,21 +181,30 @@ export default function LairPage() {
           >
             Cosmetic Shop ✨
           </Link>
-<div className="mt-4 grid grid-cols-2 gap-3">
-  <Link
-    href="/privacy-policy"
-    className="rounded-2xl bg-white/10 p-4 text-center text-sm font-bold text-white"
-  >
-    Privacy
-  </Link>
 
-  <Link
-    href="/terms"
-    className="rounded-2xl bg-white/10 p-4 text-center text-sm font-bold text-white"
-  >
-    Terms
-  </Link>
-</div>
+          <Link
+            href="/custom-name"
+            className="mt-4 block w-full rounded-2xl bg-white/10 p-4 text-center font-black text-white"
+          >
+            Custom Ghost Name — GH₵20
+          </Link>
+
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <Link
+              href="/privacy-policy"
+              className="rounded-2xl bg-white/10 p-4 text-center text-sm font-bold text-white"
+            >
+              Privacy
+            </Link>
+
+            <Link
+              href="/terms"
+              className="rounded-2xl bg-white/10 p-4 text-center text-sm font-bold text-white"
+            >
+              Terms
+            </Link>
+          </div>
+
           <button
             onClick={handleLogout}
             className="mb-24 mt-4 w-full rounded-2xl bg-red-400/90 p-4 font-bold text-black"

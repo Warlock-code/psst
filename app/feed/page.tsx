@@ -21,10 +21,13 @@ import { useUserProfile } from "@/lib/firebase/use-user-profile"
 type Post = {
   id: string
   text?: string
+  uid: string
   imageUrl?: string
   type?: string
   campus: string
+  boostedUntil?: any
   voiceUrl?: string
+  boosted?: boolean
   avatarEmoji?: string
   pollOptions?: string[]
   pollVotes?: Record<string, string>
@@ -64,7 +67,31 @@ export default function FeedPage() {
         ...item.data(),
       })) as Post[]
 
-      setPosts(loadedPosts)
+      setPosts(
+  loadedPosts.sort((a, b) => {
+    const aBoost = a.boostedUntil?.toDate
+      ? a.boostedUntil.toDate()
+      : a.boostedUntil
+        ? new Date(a.boostedUntil)
+        : null
+
+    const bBoost = b.boostedUntil?.toDate
+      ? b.boostedUntil.toDate()
+      : b.boostedUntil
+        ? new Date(b.boostedUntil)
+        : null
+
+    const now = new Date()
+
+    const aActive = aBoost && aBoost > now
+    const bActive = bBoost && bBoost > now
+
+    if (aActive && !bActive) return -1
+    if (!aActive && bActive) return 1
+
+    return 0
+  })
+)
 
       const checks = await Promise.all(
         loadedPosts.map(async (post) => {
@@ -185,11 +212,22 @@ export default function FeedPage() {
   </p>
 </div>
 
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold capitalize text-white/70">
-                    {post.type === "voice"
-  ? "🎙️ voice"
-  : post.type || "confession"}
-                  </span>
+                 <div className="flex flex-wrap items-center gap-2">
+  <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold capitalize text-white/70">
+    {post.type === "voice"
+      ? "🎙️ voice"
+      : post.type || "confession"}
+  </span>
+
+  {post.boostedUntil &&
+  ((post.boostedUntil.toDate
+    ? post.boostedUntil.toDate()
+    : new Date(post.boostedUntil)) > new Date()) && (
+    <span className="rounded-full bg-pink-400 px-3 py-1 text-xs font-black text-black">
+      BOOSTED
+    </span>
+  )}
+</div>
                 </div>
 
                 {post.text && (
@@ -274,7 +312,14 @@ export default function FeedPage() {
 
               <div className="mt-4 flex items-center justify-between text-sm text-white/50">
                 <span>{post.campus}</span>
-
+{user?.uid === post.uid && (
+  <Link
+    href={`/boost/${post.id}`}
+    className="rounded-full bg-pink-400 px-4 py-2 font-bold text-black"
+  >
+    Boost
+  </Link>
+)}
                 <button
                   onClick={() => handleYeah(post.id)}
                   disabled={yeahedPosts.includes(post.id)}

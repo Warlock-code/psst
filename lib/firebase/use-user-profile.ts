@@ -11,17 +11,28 @@ type Profile = {
   campus: string
   ghostId: string
 
+  battleChampion?: boolean
+battleChampionUntil?: any
+freeBoosts?: number
+weeklyChampion?: boolean
+weeklyChampionUntil?: any
+
+
+streakFreezeUntil?: any
+
   avatarEmoji?: string
   avatarTheme?: string
   ownedCosmetics?: string[]
 
   storageUsed?: number
+  streakRestoredAt?: any
   storageLimit?: number
 
   isPrime?: boolean
   primePlan?: "monthly" | "yearly"
   primeStartedAt?: any
   primeExpiresAt?: any
+  customNameBought?: boolean
 
   lastPostDate?: string
   streakCount?: number
