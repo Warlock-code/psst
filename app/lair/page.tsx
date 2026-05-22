@@ -141,25 +141,41 @@ export default function LairPage() {
       </section>
 
       <nav className="fixed bottom-4 left-1/2 flex w-[92%] max-w-md -translate-x-1/2 items-center justify-between rounded-3xl border border-white/10 bg-black/80 p-2 backdrop-blur">
-        <Link href="/feed" className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70">
-          Feed
-        </Link>
-        <Link href="/leaderboard" className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70">
-          Board
-        </Link>
-        <Link href="/create" className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70">
-          Post
-        </Link>
-        <Link
-  href="/battles"
-  className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70"
->
-  Battle
-</Link>
-        <Link href="/lair" className="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-black">
-          Lair
-        </Link>
-      </nav>
+  <Link
+    href="/feed"
+    className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70"
+  >
+    Feed
+  </Link>
+
+  <Link
+    href="/leaderboard"
+    className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70"
+  >
+    Board
+  </Link>
+
+  <Link
+    href="/create"
+    className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70"
+  >
+    Post
+  </Link>
+
+  <Link
+    href="/battles"
+    className="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-black"
+  >
+    Battle
+  </Link>
+
+  <Link
+    href="/lair"
+    className="rounded-2xl px-4 py-3 text-sm font-bold text-white/70"
+  >
+    Lair
+  </Link>
+</nav>
     </main>
   )
 }
