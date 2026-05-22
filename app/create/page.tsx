@@ -58,7 +58,17 @@ const [recording, setRecording] = useState(false)
 
 async function startRecording() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    if (!navigator.mediaDevices?.getUserMedia) {
+  setError("Recording is not supported on this device.")
+  return
+}
+
+const stream = await navigator.mediaDevices.getUserMedia({
+  audio: {
+    echoCancellation: true,
+    noiseSuppression: true,
+  },
+})
 
     const recorder = new MediaRecorder(stream)
     mediaRecorderRef.current = recorder
