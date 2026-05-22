@@ -26,6 +26,7 @@ type BattleEntry = {
   ghostId: string
   avatarEmoji?: string
   isPrime?: boolean
+  promptId: string
   uid: string
   votes: number
 }
@@ -36,6 +37,7 @@ export default function BattlesPage() {
   const [entry, setEntry] = useState("")
   const [entries, setEntries] = useState<BattleEntry[]>([])
   const [campus, setCampus] = useState("")
+  const [battlePrompt, setBattlePrompt] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [voting, setVoting] = useState<string | null>(null)
@@ -54,6 +56,18 @@ export default function BattlesPage() {
 
       const profile = profileSnap.data()
       setCampus(profile.campus)
+      const promptId =
+  profile.campus === "GCTU"
+    ? "gctu_current"
+    : "gctu_current"
+
+const promptSnap = await getDoc(
+  doc(db, "battlePrompts", promptId)
+)
+
+if (promptSnap.exists()) {
+  setBattlePrompt(promptSnap.data())
+}
 
       const q = query(
   collection(db, "battleEntries"),
@@ -108,7 +122,11 @@ setEntries(
 
       await addDoc(collection(db, "battleEntries"), {
         text: entry.trim(),
-        prompt: "Worst lecturer habit?",
+        prompt: battlePrompt?.text || "",
+promptId:
+  profile.campus === "GCTU"
+    ? "gctu_current"
+    : "gctu_current",
         campus: profile.campus,
         ghostId: profile.ghostId,
         avatarEmoji: profile.avatarEmoji || "👻",
@@ -192,8 +210,11 @@ setEntries(
           <p className="text-sm font-bold text-purple-200">This week’s prompt</p>
 
           <h2 className="mt-3 text-2xl font-black">
-            Worst lecturer habit?
-          </h2>
+  {battlePrompt?.text || "Loading prompt..."}
+</h2>
+          <p className="mt-2 text-sm text-white/50">
+  Winner gets campus clout + future cosmetic unlocks.
+</p>
 
           <textarea
             value={entry}
