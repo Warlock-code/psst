@@ -10,6 +10,8 @@ type Profile = {
   email: string
   campus: string
   program?: string
+  programLevel?: string
+programKey?: string
   ghostId: string
 
   battleChampion?: boolean

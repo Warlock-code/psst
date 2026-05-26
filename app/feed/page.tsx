@@ -26,6 +26,8 @@ type Post = {
   type?: string
   campus: string
   program?: string
+  programLevel?: string
+programKey?: string
   boostedUntil?: any
   voiceUrl?: string
   boosted?: boolean
@@ -58,11 +60,11 @@ export default function FeedPage() {
     }
 
    const q =
-  feedMode === "program" && profile.program
+  feedMode === "program" && profile.programKey
     ? query(
         collection(db, "posts"),
         where("campus", "==", profile.campus),
-        where("program", "==", profile.program),
+        where("programKey", "==", profile.programKey),
         orderBy("createdAt", "desc")
       )
     : query(
@@ -341,7 +343,7 @@ export default function FeedPage() {
               <div className="mt-4 flex items-center justify-between text-sm text-white/50">
                 <span>
   {post.campus}
-  {post.program && ` • ${post.program}`}
+{post.programLevel && post.program && ` • ${post.programLevel} ${post.program}`}
 </span>
 {user?.uid === post.uid && (
   <Link

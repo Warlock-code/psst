@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { createUserWithEmailAndPassword } from "firebase/auth"
 import { doc, setDoc, serverTimestamp } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase/client"
+import { GCTU_PROGRAMS, makeProgramKey } from "@/lib/programs"
 
 function makeGhostId() {
   const names = ["SilentOwl", "CampusGhost", "TeaWalker", "ShadowPal", "AnonVibe"]
@@ -21,7 +22,8 @@ function SignupContent() {
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [program, setProgram] = useState("")
+  const [programLevel, setProgramLevel] = useState("")
+const [program, setProgram] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -47,7 +49,13 @@ function SignupContent() {
       setLoading(false)
       return
     }
+if (!programLevel || !program) {
+  setError("Select your level and program.")
+  setLoading(false)
+  return
+}
 
+const programKey = makeProgramKey(programLevel, program)
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password)
       const ghostId = makeGhostId()
@@ -57,6 +65,8 @@ function SignupContent() {
         email,
         campus,
         program,
+programLevel,
+programKey,
         ghostId,
         avatarEmoji: "👻",
         avatarTheme: "default",
@@ -93,13 +103,44 @@ function SignupContent() {
             required
           />
 
-          <input
+          <select
+  value={programLevel}
+  onChange={(e) => {
+    setProgramLevel(e.target.value)
+    setProgram("")
+  }}
+  required
   className="w-full rounded-2xl border border-white/10 bg-white/10 p-4 outline-none"
-  placeholder="Program e.g. Computer Science"
+>
+  <option value="" className="text-black">
+    Select level
+  </option>
+
+  {Object.keys(GCTU_PROGRAMS).map((level) => (
+    <option key={level} value={level} className="text-black">
+      {level}
+    </option>
+  ))}
+</select>
+
+<select
   value={program}
   onChange={(e) => setProgram(e.target.value)}
   required
-/>
+  disabled={!programLevel}
+  className="w-full rounded-2xl border border-white/10 bg-white/10 p-4 outline-none disabled:opacity-50"
+>
+  <option value="" className="text-black">
+    Select program
+  </option>
+
+  {programLevel &&
+    GCTU_PROGRAMS[programLevel as keyof typeof GCTU_PROGRAMS].map((item) => (
+      <option key={item} value={item} className="text-black">
+        {item}
+      </option>
+    ))}
+</select>
 
           <input
             className="w-full rounded-2xl border border-white/10 bg-white/10 p-4 outline-none"

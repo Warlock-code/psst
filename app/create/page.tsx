@@ -166,6 +166,8 @@ export default function CreatePostPage() {
         pollVotes: {},
         campus: profile.campus,
 program: profile.program || "",
+programLevel: profile.programLevel || "",
+programKey: profile.programKey || "",
 ghostId: profile.ghostId,
         storageUsed: uploadSize,
         isPrime: profile.isPrime || false,
