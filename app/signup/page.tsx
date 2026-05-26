@@ -21,6 +21,7 @@ function SignupContent() {
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [program, setProgram] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -55,6 +56,7 @@ function SignupContent() {
         uid: res.user.uid,
         email,
         campus,
+        program,
         ghostId,
         avatarEmoji: "👻",
         avatarTheme: "default",
@@ -90,6 +92,14 @@ function SignupContent() {
             onChange={(e) => setEmail(e.target.value)}
             required
           />
+
+          <input
+  className="w-full rounded-2xl border border-white/10 bg-white/10 p-4 outline-none"
+  placeholder="Program e.g. Computer Science"
+  value={program}
+  onChange={(e) => setProgram(e.target.value)}
+  required
+/>
 
           <input
             className="w-full rounded-2xl border border-white/10 bg-white/10 p-4 outline-none"

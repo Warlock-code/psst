@@ -9,6 +9,7 @@ type Profile = {
   uid: string
   email: string
   campus: string
+  program?: string
   ghostId: string
 
   battleChampion?: boolean

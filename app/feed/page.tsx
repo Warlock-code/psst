@@ -25,6 +25,7 @@ type Post = {
   imageUrl?: string
   type?: string
   campus: string
+  program?: string
   boostedUntil?: any
   voiceUrl?: string
   boosted?: boolean
@@ -45,6 +46,7 @@ export default function FeedPage() {
 
   const [posts, setPosts] = useState<Post[]>([])
   const [activeType, setActiveType] = useState("all")
+  const [feedMode, setFeedMode] = useState<"campus" | "program">("campus")
   const [yeahedPosts, setYeahedPosts] = useState<string[]>([])
 
   useEffect(() => {
@@ -55,11 +57,19 @@ export default function FeedPage() {
       return
     }
 
-    const q = query(
-      collection(db, "posts"),
-      where("campus", "==", profile.campus),
-      orderBy("createdAt", "desc")
-    )
+   const q =
+  feedMode === "program" && profile.program
+    ? query(
+        collection(db, "posts"),
+        where("campus", "==", profile.campus),
+        where("program", "==", profile.program),
+        orderBy("createdAt", "desc")
+      )
+    : query(
+        collection(db, "posts"),
+        where("campus", "==", profile.campus),
+        orderBy("createdAt", "desc")
+      )
 
     const unsub = onSnapshot(q, async (snapshot) => {
       const loadedPosts = snapshot.docs.map((item) => ({
@@ -107,7 +117,7 @@ export default function FeedPage() {
     })
 
     return () => unsub()
-  }, [user, profile, loading, router])
+  }, [user, profile, loading, router, feedMode])
 
   async function handleYeah(postId: string) {
     if (!user) return
@@ -162,7 +172,25 @@ export default function FeedPage() {
             Post
           </Link>
         </header>
+<div className="mt-6 grid grid-cols-2 gap-2">
+  <button
+    onClick={() => setFeedMode("campus")}
+    className={`rounded-2xl p-3 text-sm font-black ${
+      feedMode === "campus" ? "bg-white text-black" : "bg-white/10 text-white"
+    }`}
+  >
+    Campus Feed
+  </button>
 
+  <button
+    onClick={() => setFeedMode("program")}
+    className={`rounded-2xl p-3 text-sm font-black ${
+      feedMode === "program" ? "bg-white text-black" : "bg-white/10 text-white"
+    }`}
+  >
+    Program Feed
+  </button>
+</div>
         <div className="mt-6 flex gap-2 overflow-x-auto pb-2">
           {filters.map((type) => (
             <button
@@ -311,7 +339,10 @@ export default function FeedPage() {
               </Link>
 
               <div className="mt-4 flex items-center justify-between text-sm text-white/50">
-                <span>{post.campus}</span>
+                <span>
+  {post.campus}
+  {post.program && ` • ${post.program}`}
+</span>
 {user?.uid === post.uid && (
   <Link
     href={`/boost/${post.id}`}
