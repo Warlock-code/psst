@@ -34,6 +34,11 @@ export default function TermsPage() {
           <p>
             Psst is provided as-is. Features may change as the app improves.
           </p>
+          <p>
+  Psst is not responsible for verifying user-generated posts. Content may include
+  opinions, jokes, rumours, satire, fictional stories, or inaccurate information.
+  Users should not treat posts as verified facts.
+</p>
         </div>
       </section>
     </main>

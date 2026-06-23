@@ -189,7 +189,7 @@ export default function LairPage() {
             Custom Ghost Name — GH₵20
           </Link>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="mt-4 grid grid-cols-3 gap-3">
             <Link
               href="/privacy-policy"
               className="rounded-2xl bg-white/10 p-4 text-center text-sm font-bold text-white"
@@ -203,6 +203,12 @@ export default function LairPage() {
             >
               Terms
             </Link>
+            <Link
+  href="/disclaimer"
+  className="rounded-2xl bg-white/10 p-4 text-center text-sm font-bold text-white"
+>
+  Disclaimer
+</Link>
           </div>
 
           <button

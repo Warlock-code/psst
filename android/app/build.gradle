@@ -4,7 +4,7 @@ android {
     namespace = "com.psst.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.psst.app"
+        applicationId "com.bronyina.psst"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
