@@ -184,12 +184,7 @@ export default function LairPage() {
             Upgrade to Prime 👑
           </Link>
 
-          <Link
-            href="/shop"
-            className="mt-4 block w-full rounded-2xl bg-white/10 p-4 text-center font-black text-white"
-          >
-            Cosmetic Shop ✨
-          </Link>
+          
           <Link
   href="/shop"
   className="block rounded-2xl bg-yellow-300 p-4 text-center font-black text-black"
