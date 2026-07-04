@@ -125,6 +125,15 @@ export default function LairPage() {
                 {profile.streakCount || 0} 🔥
               </p>
               <p className="mt-1 text-xs text-white/40">Post daily to grow it</p>
+              <div className="rounded-2xl bg-black/20 p-4">
+  <p className="text-xs text-white/40">Ghost Coins</p>
+  <p className="mt-1 text-2xl font-black">
+    {profile.ghostCoins || 0} 🪙
+  </p>
+  <p className="mt-1 text-xs text-white/40">
+    Earn coins from posting and getting Yeahs
+  </p>
+</div>
 
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <Link
@@ -181,6 +190,12 @@ export default function LairPage() {
           >
             Cosmetic Shop ✨
           </Link>
+          <Link
+  href="/shop"
+  className="block rounded-2xl bg-yellow-300 p-4 text-center font-black text-black"
+>
+  Ghost Shop 👻🪙
+</Link>
 
           <Link
             href="/custom-name"

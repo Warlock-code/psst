@@ -180,6 +180,7 @@ ghostId: profile.ghostId,
 
       await updateDoc(doc(db, "users", user.uid), {
         storageUsed: increment(uploadSize),
+        ghostCoins: increment(1),
         lastPostDate: today,
         streakCount: lastPostDate === today ? currentStreak : currentStreak + 1,
       })

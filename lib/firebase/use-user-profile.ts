@@ -11,8 +11,10 @@ type Profile = {
   campus: string
   program?: string
   programLevel?: string
+  ghostCoins?: number
 programKey?: string
   ghostId: string
+
 
   battleChampion?: boolean
 battleChampionUntil?: any
