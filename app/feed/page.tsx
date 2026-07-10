@@ -60,7 +60,7 @@ export default function FeedPage() {
 
   const [posts, setPosts] = useState<Post[]>([])
   const [activeType, setActiveType] = useState("all")
-  const [feedMode, setFeedMode] = useState<"campus" | "program">("campus")
+  const [feedMode, setFeedMode] = useState<"all" | "campus" | "program">("campus")
   const [yeahedPosts, setYeahedPosts] = useState<string[]>([])
 
   useEffect(() => {
@@ -72,7 +72,9 @@ export default function FeedPage() {
     }
 
     const postsQuery =
-      feedMode === "program" && profile.programKey
+      feedMode === "all"
+        ? query(collection(db, "posts"), orderBy("createdAt", "desc"))
+        : feedMode === "program" && profile.programKey
         ? query(
             collection(db, "posts"),
             where("campus", "==", profile.campus),
@@ -180,7 +182,13 @@ export default function FeedPage() {
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-black">Psst 👻</h1>
-            <p className="text-sm text-white/50">{profile?.campus}</p>
+            <p className="text-sm text-white/50">
+              {feedMode === "all"
+                ? "All campuses"
+                : feedMode === "program"
+                ? `${profile?.campus} • ${profile?.program || "My Program"}`
+                : profile?.campus}
+            </p>
           </div>
 
           <Link
@@ -191,7 +199,18 @@ export default function FeedPage() {
           </Link>
         </header>
 
-        <div className="mt-6 grid grid-cols-2 gap-2">
+        <div className="mt-6 grid grid-cols-3 gap-2">
+          <button
+            onClick={() => setFeedMode("all")}
+            className={`rounded-2xl p-3 text-sm font-black ${
+              feedMode === "all"
+                ? "bg-white text-black"
+                : "bg-white/10 text-white"
+            }`}
+          >
+            All
+          </button>
+
           <button
             onClick={() => setFeedMode("campus")}
             className={`rounded-2xl p-3 text-sm font-black ${
@@ -200,7 +219,7 @@ export default function FeedPage() {
                 : "bg-white/10 text-white"
             }`}
           >
-            Campus Feed
+            My Campus
           </button>
 
           <button
@@ -211,7 +230,7 @@ export default function FeedPage() {
                 : "bg-white/10 text-white"
             }`}
           >
-            Program Feed
+            My Program
           </button>
         </div>
 
@@ -280,6 +299,12 @@ export default function FeedPage() {
                           ? "🎙️ voice"
                           : post.type || "confession"}
                       </span>
+
+                      {feedMode === "all" && (
+                        <span className="rounded-full bg-purple-400/20 px-3 py-1 text-xs font-bold text-purple-200">
+                          {post.campus}
+                        </span>
+                      )}
 
                       {boosted && (
                         <span className="rounded-full bg-pink-400 px-3 py-1 text-xs font-black text-black">
