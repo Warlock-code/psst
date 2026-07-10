@@ -253,7 +253,7 @@ export default function FeedPage() {
         <div className="mt-4 space-y-4">
           {filteredPosts.length === 0 && (
             <p className="rounded-2xl bg-white/10 p-4 text-white/60">
-              No gist here yet.
+              No gist here.
             </p>
           )}
 
