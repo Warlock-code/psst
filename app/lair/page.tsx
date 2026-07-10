@@ -177,13 +177,6 @@ export default function LairPage() {
             </div>
           </div>
 
-          <Link
-            href="/prime"
-            className="mt-6 block w-full rounded-2xl bg-yellow-300 p-4 text-center font-bold text-black"
-          >
-            Upgrade to Prime 👑
-          </Link>
-
           
           <Link
   href="/shop"
