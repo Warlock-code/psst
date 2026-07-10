@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { createUserWithEmailAndPassword } from "firebase/auth"
 import { doc, setDoc, serverTimestamp } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase/client"
-import { GCTU_PROGRAMS, makeProgramKey } from "@/lib/programs"
+import { CAMPUS_PROGRAMS, makeProgramKey } from "@/lib/programs"
 
 function makeGhostId() {
   const names = ["SilentOwl", "CampusGhost", "TeaWalker", "ShadowPal", "AnonVibe"]
@@ -19,6 +19,7 @@ function SignupContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const campus = searchParams.get("campus") || ""
+  const programsForCampus = CAMPUS_PROGRAMS[campus] || {}
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -116,7 +117,7 @@ programKey,
     Select level
   </option>
 
-  {Object.keys(GCTU_PROGRAMS).map((level) => (
+  {Object.keys(programsForCampus).map((level) => (
     <option key={level} value={level} className="text-black">
       {level}
     </option>
@@ -135,7 +136,7 @@ programKey,
   </option>
 
   {programLevel &&
-    GCTU_PROGRAMS[programLevel as keyof typeof GCTU_PROGRAMS].map((item) => (
+    (programsForCampus[programLevel] || []).map((item) => (
       <option key={item} value={item} className="text-black">
         {item}
       </option>
