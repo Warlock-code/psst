@@ -81,9 +81,10 @@ programKey,
       })
 
       router.push("/feed")
-    } catch {
-      setError("Signup failed. Check your email/password and try again.")
-    } finally {
+    } catch (err) {
+  console.error("Signup error:", err)
+  setError("Signup failed. Check your email/password and try again.")
+} finally {
       setLoading(false)
     }
   }
